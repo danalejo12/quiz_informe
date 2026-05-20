@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ElastiQuiz — Daniel Velasco</title>
+<title>ElastiQuiz — SENA</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -53,7 +54,6 @@
     padding: 24px 16px;
   }
 
-  /* ---- SCREENS ---- */
   .screen { display: none; }
   .screen.active { display: block; }
 
@@ -89,14 +89,14 @@
   .intro-sub {
     color: var(--muted);
     font-size: 16px;
-    margin-bottom: 48px;
+    margin-bottom: 36px;
     max-width: 480px;
   }
 
   .stats-row {
     display: flex;
     gap: 20px;
-    margin-bottom: 48px;
+    margin-bottom: 36px;
     flex-wrap: wrap;
   }
 
@@ -116,6 +116,44 @@
     color: var(--accent);
   }
 
+  /* ---- FORM ---- */
+  .register-form {
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .field-input {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 14px 18px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  .field-input:focus { border-color: var(--accent3); }
+  .field-input::placeholder { color: var(--muted); }
+
   .btn-start {
     background: linear-gradient(135deg, var(--accent3), var(--accent));
     border: none;
@@ -129,10 +167,12 @@
     transition: all 0.25s;
     box-shadow: 0 0 40px rgba(123,47,255,0.4);
     letter-spacing: 0.02em;
+    width: 100%;
+    margin-top: 4px;
   }
 
   .btn-start:hover {
-    transform: translateY(-2px) scale(1.02);
+    transform: translateY(-2px) scale(1.01);
     box-shadow: 0 0 60px rgba(0,229,255,0.4);
   }
 
@@ -323,10 +363,7 @@
     animation: pulse-green 0.4s ease;
   }
 
-  .option-btn.correct .option-letter {
-    background: var(--green);
-    color: #000;
-  }
+  .option-btn.correct .option-letter { background: var(--green); color: #000; }
 
   .option-btn.wrong {
     border-color: var(--red);
@@ -334,10 +371,7 @@
     animation: shake 0.4s ease;
   }
 
-  .option-btn.wrong .option-letter {
-    background: var(--red);
-    color: #fff;
-  }
+  .option-btn.wrong .option-letter { background: var(--red); color: #fff; }
 
   .option-btn.reveal-correct {
     border-color: var(--green);
@@ -434,11 +468,7 @@
     background-clip: text;
   }
 
-  .result-sub {
-    color: var(--muted);
-    font-size: 15px;
-    margin-bottom: 36px;
-  }
+  .result-sub { color: var(--muted); font-size: 15px; margin-bottom: 36px; }
 
   .score-big {
     font-family: 'Syne', sans-serif;
@@ -455,7 +485,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 16px;
-    margin-bottom: 40px;
+    margin-bottom: 24px;
   }
 
   .breakdown-item {
@@ -489,8 +519,15 @@
     font-family: 'Syne', sans-serif;
     font-size: 15px;
     font-weight: 700;
-    margin-bottom: 40px;
+    margin-bottom: 24px;
     border: 2px solid;
+  }
+
+  .save-status {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    min-height: 20px;
   }
 
   .btn-retry {
@@ -511,22 +548,67 @@
     background: var(--accent3);
     box-shadow: 0 0 30px rgba(123,47,255,0.4);
   }
+
+  /* ---- TOAST ---- */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.85rem 1.5rem;
+    font-size: 0.9rem;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(0,255,136,0.4); color: var(--green); }
+  .toast.error   { border-color: rgba(255,68,68,0.4); color: var(--red); }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 <div class="container">
 
-  <!-- INTRO -->
+  <!-- INTRO + REGISTRO -->
   <div class="screen active" id="screen-intro">
-    <div class="intro-badge">⚡ ElastiQuiz × Daniel Velasco</div>
+    <div class="intro-badge">⚡ ElastiQuiz · SENA</div>
     <div class="intro-title">Elasticsearch<br>Quiz</div>
-    <div class="intro-sub">10 preguntas. 20 segundos cada una. Demuestra cuánto aprendiste sobre el motor de búsqueda más poderoso del mundo.</div>
+    <div class="intro-sub">10 preguntas. 20 segundos cada una. Ingresa tus datos y demuestra cuánto sabes del motor de búsqueda más poderoso del mundo.</div>
     <div class="stats-row">
       <div class="stat-chip"><span>10</span>Preguntas</div>
       <div class="stat-chip"><span>20s</span>Por pregunta</div>
       <div class="stat-chip"><span>100</span>Puntos máx.</div>
     </div>
-    <button class="btn-start" onclick="startQuiz()">Comenzar Quiz →</button>
+
+    <div class="register-form">
+      <div class="field-group">
+        <label class="field-label">Tu nombre completo</label>
+        <input type="text" class="field-input" id="input-name" placeholder="Ej: Daniel Velasco" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Correo electrónico</label>
+        <input type="email" class="field-input" id="input-email" placeholder="tu@correo.com" />
+      </div>
+      <button class="btn-start" onclick="startQuiz()">Comenzar Quiz →</button>
+    </div>
   </div>
 
   <!-- QUIZ -->
@@ -556,9 +638,7 @@
     </div>
 
     <div class="options-grid" id="options-grid"></div>
-
     <div class="feedback-box" id="feedback-box"></div>
-
     <button class="btn-next" id="btn-next" onclick="nextQuestion()">Siguiente →</button>
   </div>
 
@@ -585,289 +665,359 @@
         </div>
       </div>
       <div class="level-badge" id="level-badge"></div>
-      <br>
+      <div class="save-status" id="save-status"></div>
       <button class="btn-retry" onclick="resetQuiz()">↺ Intentar de nuevo</button>
     </div>
   </div>
 
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-const questions = [
-  {
-    category: "Fundamentos",
-    text: "¿Sobre qué biblioteca está construido Elasticsearch internamente?",
-    options: ["Apache Kafka", "Apache Lucene", "Apache Cassandra", "Apache Hadoop"],
-    correct: 1,
-    explanation: "Elasticsearch está construido sobre Apache Lucene, que es el motor real del índice invertido. Elastic es una capa que hace a Lucene distribuido y RESTful."
-  },
-  {
-    category: "Conceptos clave",
-    text: "En Elasticsearch, ¿cuál es el equivalente a una 'fila' en una base de datos SQL?",
-    options: ["Index", "Field", "Document", "Shard"],
-    correct: 2,
-    explanation: "Un Document (documento JSON) equivale a una fila en SQL. Un Index equivale a una tabla/base de datos, y un Field es equivalente a una columna."
-  },
-  {
-    category: "Arquitectura",
-    text: "¿Qué es el 'Inverted Index' o índice invertido?",
-    options: [
-      "Un índice que ordena datos de Z a A",
-      "Una estructura que mapea palabras a los documentos donde aparecen",
-      "Un backup del índice principal",
-      "Un índice para datos numéricos"
-    ],
-    correct: 1,
-    explanation: "El índice invertido mapea cada término/palabra a la lista de documentos que lo contienen. Esto permite búsquedas full-text en milisegundos sin escanear documento por documento."
-  },
-  {
-    category: "Query DSL",
-    text: "¿Cuál es la diferencia principal entre una query `match` y una query `term`?",
-    options: [
-      "No hay diferencia, son equivalentes",
-      "`match` es más rápida que `term`",
-      "`match` analiza el texto (tokeniza), `term` busca el valor exacto sin analizar",
-      "`term` solo funciona con números"
-    ],
-    correct: 2,
-    explanation: "`match` pasa el texto por el analyzer (lowercase, tokeniza, etc.) antes de buscar. `term` busca el valor EXACTO sin ningún procesamiento. Confundirlos es un error clásico."
-  },
-  {
-    category: "Stack ELK",
-    text: "¿Qué herramienta del Elastic Stack se usa para visualizar datos y crear dashboards?",
-    options: ["Logstash", "Beats", "Kibana", "Filebeat"],
-    correct: 2,
-    explanation: "Kibana es la interfaz visual del Elastic Stack. Logstash procesa y transforma datos. Beats/Filebeat son agentes ligeros que envían datos. Kibana es donde ves, exploras y visualizas todo."
-  },
-  {
-    category: "Arquitectura",
-    text: "¿Qué son los 'shards' en Elasticsearch?",
-    options: [
-      "Copias de seguridad de los índices",
-      "Fragmentos del índice distribuidos entre nodos para escalar horizontalmente",
-      "Archivos de log del sistema",
-      "Configuraciones de seguridad"
-    ],
-    correct: 1,
-    explanation: "Un shard es una instancia de Lucene. Elastic divide los índices en shards y los distribuye entre nodos. Esto permite almacenar y procesar datos más grandes que lo que cabe en un solo servidor."
-  },
-  {
-    category: "Buenas prácticas",
-    text: "¿Cuál es el rol ideal de Elasticsearch en una arquitectura de producción?",
-    options: [
-      "Reemplazar completamente la base de datos principal (PostgreSQL/MySQL)",
-      "Ser la única fuente de verdad del sistema",
-      "Ser la capa de búsqueda; la fuente de verdad debe ser otra BD (Postgres, Mongo, etc.)",
-      "Solo para almacenar logs, no datos de negocio"
-    ],
-    correct: 2,
-    explanation: "Elasticsearch es excelente para buscar, pero no es la BD principal. Lo correcto es: Postgres/Mongo guardan el dato original, y Elastic es la 'capa de búsqueda' sincronizada. Si Elastic falla, puedes reindexar desde la BD principal."
-  },
-  {
-    category: "Query DSL",
-    text: "¿Para qué se usa la query `bool` en Elasticsearch?",
-    options: [
-      "Solo para buscar valores booleanos (true/false)",
-      "Para combinar múltiples condiciones con must, should, must_not y filter",
-      "Para ordenar resultados de forma aleatoria",
-      "Para búsquedas de texto completo únicamente"
-    ],
-    correct: 1,
-    explanation: "La query `bool` es la más poderosa y usada. Combina: `must` (AND obligatorio), `should` (OR, suma score), `must_not` (excluir), `filter` (AND sin afectar el score de relevancia)."
-  },
-  {
-    category: "Conceptos clave",
-    text: "¿Qué es el 'Mapping' en Elasticsearch?",
-    options: [
-      "La relación entre dos índices diferentes",
-      "Un algoritmo de compresión de datos",
-      "La definición de los tipos de datos y cómo se indexan los campos de un documento",
-      "El proceso de distribuir datos entre nodos"
-    ],
-    correct: 2,
-    explanation: "El Mapping es el equivalente al schema en SQL. Define qué tipo es cada campo (text, keyword, integer, date, dense_vector) y cómo se indexa. Si no lo defines, Elastic intenta adivinarlo — y a veces se equivoca."
-  },
-  {
-    category: "Nivel siguiente",
-    text: "¿Qué característica de Elasticsearch permite implementar búsqueda semántica (por significado, no por palabras exactas) con IA?",
-    options: [
-      "Full-text search con analyzers",
-      "Aggregations pipeline",
-      "Vector search con el tipo de campo `dense_vector` y KNN",
-      "Index lifecycle management (ILM)"
-    ],
-    correct: 2,
-    explanation: "El campo `dense_vector` permite almacenar embeddings vectoriales (generados por modelos de IA). La búsqueda KNN (k-Nearest Neighbors) encuentra documentos semánticamente similares. Esto es la base de RAG con LLMs en 2026."
-  }
-];
+  const SUPABASE_URL = 'https://eixuisxxxiklovcyqqin.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_c7KZtZ2oyJZUTwLUPMDfqQ_m2iWgpja';
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let currentQ = 0;
-let score = 0;
-let correctCount = 0;
-let wrongCount = 0;
-let timerInterval = null;
-let timeLeft = 20;
-let totalTime = 0;
-let answered = false;
-const CIRC = 188;
-
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-function startQuiz() {
-  currentQ = 0; score = 0; correctCount = 0; wrongCount = 0; totalTime = 0; answered = false;
-  showScreen('screen-quiz');
-  loadQuestion();
-}
-
-function loadQuestion() {
-  answered = false;
-  const q = questions[currentQ];
-  document.getElementById('q-num').textContent = currentQ + 1;
-  document.getElementById('score-live').textContent = score;
-  document.getElementById('progress-fill').style.width = ((currentQ + 1) / 10 * 100) + '%';
-  document.getElementById('q-category').textContent = q.category;
-  document.getElementById('q-text').textContent = q.text;
-  document.getElementById('feedback-box').className = 'feedback-box';
-  document.getElementById('btn-next').className = 'btn-next';
-
-  const grid = document.getElementById('options-grid');
-  const letters = ['A','B','C','D'];
-  grid.innerHTML = '';
-  q.options.forEach((opt, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'option-btn';
-    btn.innerHTML = `<span class="option-letter">${letters[i]}</span><span>${opt}</span>`;
-    btn.onclick = () => selectOption(i);
-    grid.appendChild(btn);
-  });
-
-  startTimer();
-}
-
-function startTimer() {
-  timeLeft = 20;
-  updateTimerUI();
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    totalTime++;
-    updateTimerUI();
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      if (!answered) timeOut();
+  const questions = [
+    {
+      category: "Fundamentos",
+      text: "¿Sobre qué biblioteca está construido Elasticsearch internamente?",
+      options: ["Apache Kafka", "Apache Lucene", "Apache Cassandra", "Apache Hadoop"],
+      correct: 1,
+      explanation: "Elasticsearch está construido sobre Apache Lucene, que es el motor real del índice invertido. Elastic es una capa que hace a Lucene distribuido y RESTful."
+    },
+    {
+      category: "Conceptos clave",
+      text: "En Elasticsearch, ¿cuál es el equivalente a una 'fila' en una base de datos SQL?",
+      options: ["Index", "Field", "Document", "Shard"],
+      correct: 2,
+      explanation: "Un Document (documento JSON) equivale a una fila en SQL. Un Index equivale a una tabla/base de datos, y un Field es equivalente a una columna."
+    },
+    {
+      category: "Arquitectura",
+      text: "¿Qué es el 'Inverted Index' o índice invertido?",
+      options: [
+        "Un índice que ordena datos de Z a A",
+        "Una estructura que mapea palabras a los documentos donde aparecen",
+        "Un backup del índice principal",
+        "Un índice para datos numéricos"
+      ],
+      correct: 1,
+      explanation: "El índice invertido mapea cada término/palabra a la lista de documentos que lo contienen. Esto permite búsquedas full-text en milisegundos sin escanear documento por documento."
+    },
+    {
+      category: "Query DSL",
+      text: "¿Cuál es la diferencia principal entre una query `match` y una query `term`?",
+      options: [
+        "No hay diferencia, son equivalentes",
+        "`match` es más rápida que `term`",
+        "`match` analiza el texto (tokeniza), `term` busca el valor exacto sin analizar",
+        "`term` solo funciona con números"
+      ],
+      correct: 2,
+      explanation: "`match` pasa el texto por el analyzer (lowercase, tokeniza, etc.) antes de buscar. `term` busca el valor EXACTO sin ningún procesamiento. Confundirlos es un error clásico."
+    },
+    {
+      category: "Stack ELK",
+      text: "¿Qué herramienta del Elastic Stack se usa para visualizar datos y crear dashboards?",
+      options: ["Logstash", "Beats", "Kibana", "Filebeat"],
+      correct: 2,
+      explanation: "Kibana es la interfaz visual del Elastic Stack. Logstash procesa y transforma datos. Beats/Filebeat son agentes ligeros que envían datos. Kibana es donde ves, exploras y visualizas todo."
+    },
+    {
+      category: "Arquitectura",
+      text: "¿Qué son los 'shards' en Elasticsearch?",
+      options: [
+        "Copias de seguridad de los índices",
+        "Fragmentos del índice distribuidos entre nodos para escalar horizontalmente",
+        "Archivos de log del sistema",
+        "Configuraciones de seguridad"
+      ],
+      correct: 1,
+      explanation: "Un shard es una instancia de Lucene. Elastic divide los índices en shards y los distribuye entre nodos. Esto permite almacenar y procesar datos más grandes que lo que cabe en un solo servidor."
+    },
+    {
+      category: "Buenas prácticas",
+      text: "¿Cuál es el rol ideal de Elasticsearch en una arquitectura de producción?",
+      options: [
+        "Reemplazar completamente la base de datos principal (PostgreSQL/MySQL)",
+        "Ser la única fuente de verdad del sistema",
+        "Ser la capa de búsqueda; la fuente de verdad debe ser otra BD (Postgres, Mongo, etc.)",
+        "Solo para almacenar logs, no datos de negocio"
+      ],
+      correct: 2,
+      explanation: "Elasticsearch es excelente para buscar, pero no es la BD principal. Lo correcto es: Postgres/Mongo guardan el dato original, y Elastic es la 'capa de búsqueda' sincronizada. Si Elastic falla, puedes reindexar desde la BD principal."
+    },
+    {
+      category: "Query DSL",
+      text: "¿Para qué se usa la query `bool` en Elasticsearch?",
+      options: [
+        "Solo para buscar valores booleanos (true/false)",
+        "Para combinar múltiples condiciones con must, should, must_not y filter",
+        "Para ordenar resultados de forma aleatoria",
+        "Para búsquedas de texto completo únicamente"
+      ],
+      correct: 1,
+      explanation: "La query `bool` es la más poderosa y usada. Combina: `must` (AND obligatorio), `should` (OR, suma score), `must_not` (excluir), `filter` (AND sin afectar el score de relevancia)."
+    },
+    {
+      category: "Conceptos clave",
+      text: "¿Qué es el 'Mapping' en Elasticsearch?",
+      options: [
+        "La relación entre dos índices diferentes",
+        "Un algoritmo de compresión de datos",
+        "La definición de los tipos de datos y cómo se indexan los campos de un documento",
+        "El proceso de distribuir datos entre nodos"
+      ],
+      correct: 2,
+      explanation: "El Mapping es el equivalente al schema en SQL. Define qué tipo es cada campo (text, keyword, integer, date, dense_vector) y cómo se indexa. Si no lo defines, Elastic intenta adivinarlo — y a veces se equivoca."
+    },
+    {
+      category: "Nivel siguiente",
+      text: "¿Qué característica de Elasticsearch permite implementar búsqueda semántica con IA?",
+      options: [
+        "Full-text search con analyzers",
+        "Aggregations pipeline",
+        "Vector search con el tipo de campo `dense_vector` y KNN",
+        "Index lifecycle management (ILM)"
+      ],
+      correct: 2,
+      explanation: "El campo `dense_vector` permite almacenar embeddings vectoriales (generados por modelos de IA). La búsqueda KNN (k-Nearest Neighbors) encuentra documentos semánticamente similares. Esto es la base de RAG con LLMs en 2026."
     }
-  }, 1000);
-}
+  ];
 
-function updateTimerUI() {
-  const num = document.getElementById('timer-num');
-  const circle = document.getElementById('timer-circle');
-  num.textContent = timeLeft;
-  const offset = CIRC - (timeLeft / 20) * CIRC;
-  circle.style.strokeDashoffset = offset;
-  if (timeLeft <= 5) {
-    circle.style.stroke = 'var(--red)';
-    num.style.color = 'var(--red)';
-  } else if (timeLeft <= 10) {
-    circle.style.stroke = 'var(--accent2)';
-    num.style.color = 'var(--accent2)';
-  } else {
-    circle.style.stroke = 'var(--accent)';
-    num.style.color = 'var(--accent)';
-  }
-}
+  let userName = '';
+  let userEmail = '';
+  let startedAt = null;
+  let answers = [];
+  let currentQ = 0;
+  let score = 0;
+  let correctCount = 0;
+  let wrongCount = 0;
+  let timerInterval = null;
+  let timeLeft = 20;
+  let totalTime = 0;
+  let answered = false;
+  const CIRC = 188;
 
-function selectOption(idx) {
-  if (answered) return;
-  answered = true;
-  clearInterval(timerInterval);
-
-  const q = questions[currentQ];
-  const btns = document.querySelectorAll('.option-btn');
-  const isCorrect = idx === q.correct;
-
-  btns[idx].classList.add(isCorrect ? 'correct' : 'wrong');
-  if (!isCorrect) btns[q.correct].classList.add('reveal-correct');
-  btns.forEach(b => b.disabled = true);
-
-  if (isCorrect) {
-    const pts = Math.max(10, Math.round(10 * (timeLeft / 20) * 10));
-    score += pts;
-    correctCount++;
-  } else {
-    wrongCount++;
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
   }
 
-  const fb = document.getElementById('feedback-box');
-  fb.innerHTML = `<strong>${isCorrect ? '✅ ¡Correcto!' : '❌ Incorrecto'}</strong> — ${q.explanation}`;
-  fb.className = 'feedback-box show';
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => { t.className = 'toast'; }, 3500);
+  }
 
-  document.getElementById('score-live').textContent = score;
-  document.getElementById('btn-next').className = 'btn-next show';
-}
+  function startQuiz() {
+    const name  = document.getElementById('input-name').value.trim();
+    const email = document.getElementById('input-email').value.trim();
 
-function timeOut() {
-  answered = true;
-  wrongCount++;
-  const q = questions[currentQ];
-  const btns = document.querySelectorAll('.option-btn');
-  btns[q.correct].classList.add('reveal-correct');
-  btns.forEach(b => b.disabled = true);
-  const fb = document.getElementById('feedback-box');
-  fb.innerHTML = `<strong>⏰ Tiempo agotado</strong> — La respuesta correcta era: <strong>${q.options[q.correct]}</strong>. ${q.explanation}`;
-  fb.className = 'feedback-box show';
-  document.getElementById('btn-next').className = 'btn-next show';
-}
+    if (!name || !email) { showToast('Completa tu nombre y correo', 'error'); return; }
+    if (!email.includes('@')) { showToast('Ingresa un correo válido', 'error'); return; }
 
-function nextQuestion() {
-  currentQ++;
-  if (currentQ >= questions.length) {
-    showResults();
-  } else {
+    userName  = name;
+    userEmail = email;
+    startedAt = new Date().toISOString();
+    answers   = [];
+    currentQ = 0; score = 0; correctCount = 0; wrongCount = 0; totalTime = 0; answered = false;
+
+    showScreen('screen-quiz');
     loadQuestion();
   }
-}
 
-function showResults() {
-  showScreen('screen-results');
-  document.getElementById('score-final').textContent = score;
-  document.getElementById('res-correct').textContent = correctCount;
-  document.getElementById('res-wrong').textContent = wrongCount;
-  document.getElementById('res-time').textContent = totalTime + 's';
+  function loadQuestion() {
+    answered = false;
+    const q = questions[currentQ];
+    document.getElementById('q-num').textContent = currentQ + 1;
+    document.getElementById('score-live').textContent = score;
+    document.getElementById('progress-fill').style.width = ((currentQ + 1) / 10 * 100) + '%';
+    document.getElementById('q-category').textContent = q.category;
+    document.getElementById('q-text').textContent = q.text;
+    document.getElementById('feedback-box').className = 'feedback-box';
+    document.getElementById('btn-next').className = 'btn-next';
 
-  let emoji, title, sub, levelColor, levelText;
-  const pct = (correctCount / 10) * 100;
+    const grid = document.getElementById('options-grid');
+    const letters = ['A','B','C','D'];
+    grid.innerHTML = '';
+    q.options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.innerHTML = `<span class="option-letter">${letters[i]}</span><span>${opt}</span>`;
+      btn.onclick = () => selectOption(i);
+      grid.appendChild(btn);
+    });
 
-  if (pct >= 90) {
-    emoji = '🏆'; title = '¡Maestro Elastic!'; sub = 'Nivel: Architect Senior';
-    levelColor = '#ffd700'; levelText = '🏆 Elasticsearch Architect';
-  } else if (pct >= 70) {
-    emoji = '🚀'; title = '¡Muy bien, Daniel!'; sub = 'Nivel: Desarrollador Avanzado';
-    levelColor = '#00e5ff'; levelText = '🚀 Elastic Developer Pro';
-  } else if (pct >= 50) {
-    emoji = '📚'; title = 'Buen progreso'; sub = 'Nivel: Aprendiz Avanzado';
-    levelColor = '#7b2fff'; levelText = '📚 Elastic Apprentice';
-  } else {
-    emoji = '💪'; title = '¡Sigue practicando!'; sub = 'Nivel: Iniciando el camino';
-    levelColor = '#ff3cac'; levelText = '💪 Elastic Beginner';
+    startTimer();
   }
 
-  document.getElementById('result-emoji').textContent = emoji;
-  document.getElementById('result-title').textContent = title;
-  document.getElementById('result-sub').textContent = sub;
-  const badge = document.getElementById('level-badge');
-  badge.textContent = levelText;
-  badge.style.borderColor = levelColor;
-  badge.style.color = levelColor;
-  badge.style.background = `${levelColor}15`;
-}
+  function startTimer() {
+    timeLeft = 20;
+    updateTimerUI();
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      totalTime++;
+      updateTimerUI();
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        if (!answered) timeOut();
+      }
+    }, 1000);
+  }
 
-function resetQuiz() {
-  startQuiz();
-}
+  function updateTimerUI() {
+    const num    = document.getElementById('timer-num');
+    const circle = document.getElementById('timer-circle');
+    num.textContent = timeLeft;
+    circle.style.strokeDashoffset = CIRC - (timeLeft / 20) * CIRC;
+    if (timeLeft <= 5) {
+      circle.style.stroke = 'var(--red)';
+      num.style.color = 'var(--red)';
+    } else if (timeLeft <= 10) {
+      circle.style.stroke = 'var(--accent2)';
+      num.style.color = 'var(--accent2)';
+    } else {
+      circle.style.stroke = 'var(--accent)';
+      num.style.color = 'var(--accent)';
+    }
+  }
+
+  function selectOption(idx) {
+    if (answered) return;
+    answered = true;
+    clearInterval(timerInterval);
+
+    const q = questions[currentQ];
+    const btns = document.querySelectorAll('.option-btn');
+    const isCorrect = idx === q.correct;
+
+    btns[idx].classList.add(isCorrect ? 'correct' : 'wrong');
+    if (!isCorrect) btns[q.correct].classList.add('reveal-correct');
+    btns.forEach(b => b.disabled = true);
+
+    answers.push({
+      questionText:   q.text,
+      selectedOption: q.options[idx],
+      correctOption:  q.options[q.correct],
+      isCorrect,
+      answeredAt: new Date().toISOString()
+    });
+
+    if (isCorrect) {
+      const pts = Math.max(10, Math.round(10 * (timeLeft / 20) * 10));
+      score += pts;
+      correctCount++;
+    } else {
+      wrongCount++;
+    }
+
+    const fb = document.getElementById('feedback-box');
+    fb.innerHTML = `<strong>${isCorrect ? '✅ ¡Correcto!' : '❌ Incorrecto'}</strong> — ${q.explanation}`;
+    fb.className = 'feedback-box show';
+
+    document.getElementById('score-live').textContent = score;
+    document.getElementById('btn-next').className = 'btn-next show';
+  }
+
+  function timeOut() {
+    answered = true;
+    wrongCount++;
+    const q = questions[currentQ];
+    const btns = document.querySelectorAll('.option-btn');
+    btns[q.correct].classList.add('reveal-correct');
+    btns.forEach(b => b.disabled = true);
+
+    answers.push({
+      questionText:   q.text,
+      selectedOption: null,
+      correctOption:  q.options[q.correct],
+      isCorrect: false,
+      answeredAt: new Date().toISOString()
+    });
+
+    const fb = document.getElementById('feedback-box');
+    fb.innerHTML = `<strong>⏰ Tiempo agotado</strong> — La respuesta correcta era: <strong>${q.options[q.correct]}</strong>. ${q.explanation}`;
+    fb.className = 'feedback-box show';
+    document.getElementById('btn-next').className = 'btn-next show';
+  }
+
+  function nextQuestion() {
+    currentQ++;
+    if (currentQ >= questions.length) {
+      showResults();
+    } else {
+      loadQuestion();
+    }
+  }
+
+  async function showResults() {
+    showScreen('screen-results');
+    document.getElementById('score-final').textContent = score;
+    document.getElementById('res-correct').textContent = correctCount;
+    document.getElementById('res-wrong').textContent   = wrongCount;
+    document.getElementById('res-time').textContent    = totalTime + 's';
+
+    const pct = (correctCount / 10) * 100;
+    let emoji, title, sub, levelColor, levelText;
+
+    if (pct >= 90) {
+      emoji = '🏆'; title = '¡Maestro Elastic!'; sub = 'Nivel: Architect Senior';
+      levelColor = '#ffd700'; levelText = '🏆 Elasticsearch Architect';
+    } else if (pct >= 70) {
+      emoji = '🚀'; title = '¡Muy buen resultado!'; sub = 'Nivel: Desarrollador Avanzado';
+      levelColor = '#00e5ff'; levelText = '🚀 Elastic Developer Pro';
+    } else if (pct >= 50) {
+      emoji = '📚'; title = 'Buen progreso'; sub = 'Nivel: Aprendiz Avanzado';
+      levelColor = '#7b2fff'; levelText = '📚 Elastic Apprentice';
+    } else {
+      emoji = '💪'; title = '¡Sigue practicando!'; sub = 'Nivel: Iniciando el camino';
+      levelColor = '#ff3cac'; levelText = '💪 Elastic Beginner';
+    }
+
+    document.getElementById('result-emoji').textContent = emoji;
+    document.getElementById('result-title').textContent = title;
+    document.getElementById('result-sub').textContent   = sub;
+    const badge = document.getElementById('level-badge');
+    badge.textContent = levelText;
+    badge.style.borderColor = levelColor;
+    badge.style.color = levelColor;
+    badge.style.background = `${levelColor}15`;
+
+    await saveToSupabase(correctCount, pct);
+  }
+
+  async function saveToSupabase(correct, pct) {
+    const statusEl = document.getElementById('save-status');
+    statusEl.innerHTML = '<span class="spinner"></span> Guardando resultados...';
+
+    const { error } = await db.from('quiz_resultados').insert([{
+      nombre:         userName,
+      email:          userEmail,
+      score_correcto: correct,
+      score_total:    questions.length,
+      porcentaje:     Math.round(pct),
+      respuestas:     answers,
+      tiempo_inicio:  startedAt,
+      tiempo_fin:     new Date().toISOString()
+    }]);
+
+    if (error) {
+      console.error('Supabase error:', error);
+      statusEl.textContent = '⚠️ No se pudo guardar. Revisa la consola.';
+    } else {
+      statusEl.textContent = '✅ Resultado guardado correctamente.';
+    }
+  }
+
+  function resetQuiz() {
+    showScreen('screen-intro');
+  }
 </script>
 </body>
 </html>
