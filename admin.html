@@ -561,8 +561,9 @@
 
     /* ==================== PDF EXPORT ZONE ==================== */
     #pdf-content {
-      position: absolute;
-      left: -9999px;
+      position: fixed;
+      top: -9999px;
+      left: 0;
       width: 800px;
       font-family: 'Space Grotesk', sans-serif;
       color: #1a1a2e;
@@ -1082,20 +1083,29 @@
       </div>
     `;
 
+    const pdfEl = document.getElementById('pdf-content');
+    pdfEl.style.top = '0';
+
     const opt = {
       margin:      [10, 10, 10, 10],
       filename:    `quiz-resultados-${now.toISOString().slice(0,10)}.pdf`,
       image:       { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
       jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
 
     html2pdf()
       .set(opt)
-      .from(document.getElementById('pdf-content'))
+      .from(pdfEl)
       .save()
-      .then(() => showToast('PDF descargado 🎉', 'success'))
-      .catch(() => showToast('Error al generar PDF', 'error'));
+      .then(() => {
+        pdfEl.style.top = '-9999px';
+        showToast('PDF descargado 🎉', 'success');
+      })
+      .catch(() => {
+        pdfEl.style.top = '-9999px';
+        showToast('Error al generar PDF', 'error');
+      });
   }
 
   /* ================================================================
