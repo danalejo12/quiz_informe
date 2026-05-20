@@ -649,7 +649,7 @@
       <div class="result-title" id="result-title">¡Excelente!</div>
       <div class="result-sub" id="result-sub">Tu nivel en Elasticsearch</div>
       <div class="score-big" id="score-final">0</div>
-      <div class="score-label">PUNTOS DE 100</div>
+      <div class="score-label">PUNTOS DE 1000</div>
       <div class="result-breakdown">
         <div class="breakdown-item">
           <span class="val" id="res-correct" style="color:var(--green)">0</span>
@@ -996,20 +996,22 @@
     const statusEl = document.getElementById('save-status');
     statusEl.innerHTML = '<span class="spinner"></span> Guardando resultados...';
 
-    const { error } = await db.from('quiz_resultados').insert([{
+    const payload = {
       nombre:         userName,
       email:          userEmail,
       score_correcto: correct,
       score_total:    questions.length,
       porcentaje:     Math.round(pct),
-      respuestas:     answers,
+      respuestas:     JSON.stringify(answers),
       tiempo_inicio:  startedAt,
       tiempo_fin:     new Date().toISOString()
-    }]);
+    };
+
+    const { error } = await db.from('quiz_resultados').insert([payload]);
 
     if (error) {
       console.error('Supabase error:', error);
-      statusEl.textContent = '⚠️ No se pudo guardar. Revisa la consola.';
+      statusEl.innerHTML = `⚠️ Error al guardar: <em style="font-size:12px;opacity:0.8">${error.message || error.code || JSON.stringify(error)}</em>`;
     } else {
       statusEl.textContent = '✅ Resultado guardado correctamente.';
     }
