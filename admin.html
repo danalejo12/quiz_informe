@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — Quiz SENA</title>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- html2pdf para exportación PDF desde el navegador -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
+
+    :root {
+      --bg: #07080f;
+      --surface: #10111a;
+      --card: #171824;
+      --border: rgba(255,255,255,0.07);
+      --accent: #6c63ff;
+      --accent2: #00e5a0;
+      --text: #eeeef5;
+      --muted: #6b6b8a;
+      --danger: #ff4d6d;
+      --success: #00e5a0;
+      --warning: #f59e0b;
+      --sidebar-w: 240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ==================== LOGIN SCREEN ==================== */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-card .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(108,99,255,0.12);
+      border: 1px solid rgba(108,99,255,0.25);
+      color: #a89fff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 100px;
+      margin-bottom: 1.5rem;
+    }
+
+    .login-card h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.9rem;
+      font-weight: 800;
+      margin-bottom: 0.4rem;
+    }
+
+    .login-card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+      padding: 0.8rem 1rem;
+      margin-bottom: 1.1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: var(--accent); }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.85rem 1.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      width: 100%;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #5a52e0;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(108,99,255,0.3);
+    }
+
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .error-msg {
+      background: rgba(255,77,109,0.1);
+      border: 1px solid rgba(255,77,109,0.3);
+      border-radius: 10px;
+      color: #ff8fa3;
+      font-size: 0.85rem;
+      padding: 0.75rem 1rem;
+      margin-top: 0.75rem;
+      display: none;
+    }
+
+    /* ==================== DASHBOARD ==================== */
+    #dashboard { display: none; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .sidebar-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text);
+      padding: 0.5rem 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.2rem;
+    }
+
+    .sidebar-logo span { color: #a89fff; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 0.65rem 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      background: rgba(108,99,255,0.12);
+      color: #a89fff;
+    }
+
+    .nav-icon { font-size: 1.1rem; }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .user-info { font-size: 0.8rem; }
+    .user-info .name { font-weight: 600; color: var(--text); }
+    .user-info .role { color: var(--muted); font-size: 0.72rem; }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.8rem;
+      padding: 0.4rem 0.8rem;
+      margin: 0.5rem 0.75rem 0;
+      transition: all 0.2s;
+      width: calc(100% - 1.5rem);
+    }
+
+    .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* Main content */
+    .main {
+      padding: 2rem 2.5rem;
+      overflow-y: auto;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 0.25rem;
+    }
+
+    .page-sub { color: var(--muted); font-size: 0.85rem; }
+
+    /* Action buttons row */
+    .actions-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-outline {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.6rem 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+
+    .btn-outline:hover { border-color: var(--accent); color: var(--text); }
+
+    .btn-pdf {
+      background: rgba(0,229,160,0.1);
+      border: 1px solid rgba(0,229,160,0.3);
+      border-radius: 10px;
+      color: var(--success);
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.6rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+
+    .btn-pdf:hover {
+      background: rgba(0,229,160,0.18);
+      transform: translateY(-1px);
+    }
+
+    /* KPI cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .kpi-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .kpi-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .kpi-value.green  { color: var(--success); }
+    .kpi-value.purple { color: #a89fff; }
+    .kpi-value.amber  { color: var(--warning); }
+
+    /* Tabla de resultados */
+    .table-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-toolbar h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .search-input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.85rem;
+      outline: none;
+      width: 200px;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .data-table thead tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-table th {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.85rem 1.5rem;
+      text-align: left;
+    }
+
+    .data-table td {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      padding: 0.9rem 1.5rem;
+      vertical-align: middle;
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+
+    .data-table tbody tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .badge-score {
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.2rem 0.75rem;
+      display: inline-block;
+    }
+
+    .badge-score.high {
+      background: rgba(0,229,160,0.12);
+      color: var(--success);
+    }
+
+    .badge-score.mid {
+      background: rgba(245,158,11,0.12);
+      color: var(--warning);
+    }
+
+    .badge-score.low {
+      background: rgba(255,77,109,0.12);
+      color: var(--danger);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--muted);
+    }
+
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 3rem;
+      color: var(--muted);
+    }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Detail drawer */
+    .drawer-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+    }
+
+    .drawer-overlay.open { display: block; }
+
+    .drawer {
+      position: fixed;
+      top: 0; right: 0;
+      width: 420px;
+      height: 100vh;
+      background: var(--card);
+      border-left: 1px solid var(--border);
+      padding: 2rem;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 101;
+    }
+
+    .drawer.open { transform: translateX(0); }
+
+    .drawer h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .drawer-close {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.4rem 0.6rem;
+      position: absolute;
+      right: 1.5rem;
+      top: 1.5rem;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.88rem;
+    }
+
+    .detail-row .key { color: var(--muted); }
+    .detail-row .val { font-weight: 500; text-align: right; max-width: 60%; }
+
+    .answer-item {
+      background: var(--surface);
+      border-radius: 10px;
+      margin-bottom: 0.6rem;
+      padding: 0.8rem 1rem;
+      font-size: 0.83rem;
+      line-height: 1.5;
+    }
+
+    .answer-item .q { color: var(--muted); margin-bottom: 0.3rem; }
+    .answer-item .a { font-weight: 500; }
+    .answer-item.ok .a  { color: var(--success); }
+    .answer-item.bad .a { color: var(--danger); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem 1.5rem;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+      white-space: nowrap;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: rgba(0,229,160,0.4); color: var(--success); }
+    .toast.error   { border-color: rgba(255,77,109,0.4); color: var(--danger); }
+
+    /* ==================== PDF EXPORT ZONE ==================== */
+    #pdf-content {
+      position: absolute;
+      left: -9999px;
+      width: 800px;
+      font-family: 'Space Grotesk', sans-serif;
+      color: #1a1a2e;
+    }
+
+    .pdf-header {
+      background: linear-gradient(135deg, #6c63ff 0%, #3ecfb4 100%);
+      border-radius: 12px;
+      color: #fff;
+      padding: 1.5rem 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .pdf-header h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .pdf-header p  { font-size: 0.85rem; opacity: 0.8; }
+
+    .pdf-kpi-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .pdf-kpi {
+      border: 2px solid #e8e8f0;
+      border-radius: 10px;
+      flex: 1;
+      padding: 0.9rem 1.2rem;
+      text-align: center;
+    }
+
+    .pdf-kpi .num { font-size: 1.5rem; font-weight: 700; color: #6c63ff; }
+    .pdf-kpi .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+
+    .pdf-table { width: 100%; border-collapse: collapse; }
+    .pdf-table th {
+      background: #f0f0f8;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      padding: 0.7rem 1rem;
+      text-align: left;
+      text-transform: uppercase;
+      color: #555;
+    }
+
+    .pdf-table td {
+      border-bottom: 1px solid #ebebf5;
+      font-size: 0.83rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .pdf-badge {
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+    }
+
+    .pdf-badge.high { background: #d1fae5; color: #065f46; }
+    .pdf-badge.mid  { background: #fef3c7; color: #92400e; }
+    .pdf-badge.low  { background: #fee2e2; color: #991b1b; }
+
+    .pdf-footer {
+      font-size: 0.72rem;
+      color: #aaa;
+      text-align: center;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e8e8f0;
+    }
+
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .main { padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="badge">🔐 Acceso Restringido</div>
+    <h1>Panel de Admin</h1>
+    <p>Solo administradores pueden acceder a los resultados del quiz.</p>
+    <div>
+      <label>Correo del administrador</label>
+      <input type="email" id="admin-email" placeholder="admin@sena.edu.co" />
+      <label>Contraseña</label>
+      <input type="password" id="admin-pass" placeholder="••••••••" />
+      <button class="btn btn-primary" id="login-btn" onclick="loginAdmin()">
+        Iniciar Sesión →
+      </button>
+      <div class="error-msg" id="login-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DASHBOARD ===================== -->
+<div id="dashboard">
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">Quiz<span>Admin</span></div>
+      <nav>
+        <a class="nav-item active" href="#">
+          <span class="nav-icon">📊</span> Resultados
+        </a>
+        <a class="nav-item" href="#" style="opacity:0.4;pointer-events:none;">
+          <span class="nav-icon">📋</span> Preguntas
+        </a>
+        <a class="nav-item" href="#" style="opacity:0.4;pointer-events:none;">
+          <span class="nav-icon">⚙️</span> Configuración
+        </a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="user-chip">
+          <div class="avatar" id="admin-avatar">A</div>
+          <div class="user-info">
+            <div class="name" id="admin-name">Administrador</div>
+            <div class="role">Admin · SENA</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logoutAdmin()">Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Resultados del Quiz</div>
+          <div class="page-sub">Todos los intentos registrados</div>
+        </div>
+        <div class="actions-row">
+          <button class="btn-outline" onclick="loadResults()">⟳ Actualizar</button>
+          <button class="btn-pdf" onclick="exportPDF()">⬇ Exportar PDF</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total intentos</div>
+          <div class="kpi-value purple" id="kpi-total">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Promedio</div>
+          <div class="kpi-value green" id="kpi-avg">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Puntaje más alto</div>
+          <div class="kpi-value amber" id="kpi-top">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Aprobados (≥60%)</div>
+          <div class="kpi-value green" id="kpi-pass">—</div>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <h3>Respuestas registradas</h3>
+          <input
+            type="text"
+            class="search-input"
+            id="search-input"
+            placeholder="Buscar por nombre..."
+            oninput="filterTable(this.value)"
+          />
+        </div>
+        <div id="table-body">
+          <div class="loading">
+            <div class="spinner"></div>
+            Cargando resultados...
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Detail Drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="detail-drawer">
+  <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  <div id="drawer-content"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Zona de exportación PDF (oculta) -->
+<div id="pdf-content"></div>
+
+<script>
+  /* ================================================================
+     ▼▼▼  CONFIGURACIÓN SUPABASE  ▼▼▼
+     Usa las MISMAS credenciales que en quiz.html
+  ================================================================ */
+  const SUPABASE_URL = 'https://eixuisxxxiklovcyqqin.supabase.co/rest/v1/';
+  const SUPABASE_ANON_KEY = 'sb_publishable_c7KZtZ2oyJZUTwLUPMDfqQ_m2iWgpja';
+
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let allResults = [];
+  let filteredResults = [];
+
+  /* ================================================================
+     AUTH
+  ================================================================ */
+
+  // Verificar sesión activa al cargar
+  window.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      showDashboard(session.user);
+    }
+  });
+
+  async function loginAdmin() {
+    const email = document.getElementById('admin-email').value.trim();
+    const pass  = document.getElementById('admin-pass').value;
+    const btn   = document.getElementById('login-btn');
+    const errEl = document.getElementById('login-error');
+
+    if (!email || !pass) {
+      showLoginError('Completa todos los campos.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Verificando...';
+    errEl.style.display = 'none';
+
+    const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+
+    if (error) {
+      showLoginError(error.message === 'Invalid login credentials'
+        ? 'Credenciales incorrectas. Verifica tu correo y contraseña.'
+        : error.message
+      );
+      btn.disabled = false;
+      btn.textContent = 'Iniciar Sesión →';
+      return;
+    }
+
+    showDashboard(data.user);
+  }
+
+  async function logoutAdmin() {
+    await db.auth.signOut();
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+
+  function showDashboard(user) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+
+    // Mostrar email del admin
+    const initials = user.email.slice(0, 2).toUpperCase();
+    document.getElementById('admin-avatar').textContent = initials;
+    document.getElementById('admin-name').textContent = user.email.split('@')[0];
+
+    loadResults();
+  }
+
+  function showLoginError(msg) {
+    const el = document.getElementById('login-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  /* ================================================================
+     CARGAR Y MOSTRAR RESULTADOS
+  ================================================================ */
+
+  async function loadResults() {
+    document.getElementById('table-body').innerHTML = `
+      <div class="loading"><div class="spinner"></div> Cargando...</div>
+    `;
+
+    const { data, error } = await db
+      .from('quiz_resultados')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      document.getElementById('table-body').innerHTML = `
+        <div class="empty-state">
+          <div class="icon">⚠️</div>
+          <p>Error: ${error.message}</p>
+        </div>
+      `;
+      return;
+    }
+
+    allResults = data || [];
+    filteredResults = [...allResults];
+    updateKPIs(allResults);
+    renderTable(filteredResults);
+  }
+
+  function updateKPIs(data) {
+    if (!data.length) return;
+
+    const total  = data.length;
+    const avg    = Math.round(data.reduce((s, r) => s + r.porcentaje, 0) / total);
+    const top    = Math.max(...data.map(r => r.porcentaje));
+    const passed = data.filter(r => r.porcentaje >= 60).length;
+
+    document.getElementById('kpi-total').textContent = total;
+    document.getElementById('kpi-avg').textContent   = avg + '%';
+    document.getElementById('kpi-top').textContent   = top + '%';
+    document.getElementById('kpi-pass').textContent  = passed;
+  }
+
+  function renderTable(data) {
+    if (!data.length) {
+      document.getElementById('table-body').innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <p>No hay resultados aún.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const html = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Resultado</th>
+            <th>Correctas</th>
+            <th>Fecha</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map((r, i) => `
+            <tr>
+              <td style="color:var(--muted);">${i + 1}</td>
+              <td style="font-weight:600;">${r.nombre}</td>
+              <td style="color:var(--muted);font-size:0.82rem;">${r.email}</td>
+              <td>
+                <span class="badge-score ${getBadgeClass(r.porcentaje)}">
+                  ${r.porcentaje}%
+                </span>
+              </td>
+              <td>${r.score_correcto}/${r.score_total}</td>
+              <td style="color:var(--muted);font-size:0.82rem;">${formatDate(r.created_at)}</td>
+              <td>
+                <button
+                  onclick="openDrawer(${i})"
+                  style="background:none;border:1px solid var(--border);border-radius:7px;
+                         color:var(--muted);cursor:pointer;font-size:0.78rem;padding:0.3rem 0.6rem;
+                         font-family:'Space Grotesk',sans-serif;transition:all 0.2s;"
+                  onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--text)'"
+                  onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'"
+                >
+                  Ver detalle
+                </button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    document.getElementById('table-body').innerHTML = html;
+  }
+
+  function filterTable(query) {
+    filteredResults = query
+      ? allResults.filter(r => r.nombre.toLowerCase().includes(query.toLowerCase()))
+      : [...allResults];
+    renderTable(filteredResults);
+  }
+
+  /* ================================================================
+     DETAIL DRAWER
+  ================================================================ */
+
+  function openDrawer(index) {
+    const r = filteredResults[index];
+    if (!r) return;
+
+    const answers = Array.isArray(r.respuestas) ? r.respuestas : [];
+
+    const answersHTML = answers.length
+      ? answers.map(a => `
+          <div class="answer-item ${a.isCorrect ? 'ok' : 'bad'}">
+            <div class="q">🔸 ${a.questionText}</div>
+            <div class="a">
+              ${a.isCorrect ? '✅' : '❌'}
+              ${a.selectedOption}
+              ${!a.isCorrect ? `<span style="color:var(--success);display:block;margin-top:0.25rem;">
+                Correcta: ${a.correctOption}</span>` : ''}
+            </div>
+          </div>
+        `).join('')
+      : '<p style="color:var(--muted);font-size:0.85rem;">Sin detalle de respuestas.</p>';
+
+    document.getElementById('drawer-content').innerHTML = `
+      <h2>${r.nombre}</h2>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;">${r.email}</p>
+
+      <div class="detail-row">
+        <span class="key">Resultado</span>
+        <span class="val">
+          <span class="badge-score ${getBadgeClass(r.porcentaje)}">${r.porcentaje}%</span>
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="key">Respuestas correctas</span>
+        <span class="val">${r.score_correcto} de ${r.score_total}</span>
+      </div>
+      <div class="detail-row">
+        <span class="key">Fecha</span>
+        <span class="val">${formatDate(r.created_at)}</span>
+      </div>
+      <div class="detail-row" style="border:none;margin-bottom:1.5rem;">
+        <span class="key">Duración</span>
+        <span class="val">${getDuration(r.tiempo_inicio, r.tiempo_fin)}</span>
+      </div>
+
+      <p style="font-size:0.75rem;font-weight:600;text-transform:uppercase;
+                letter-spacing:0.08em;color:var(--muted);margin-bottom:0.75rem;">
+        Respuestas detalladas
+      </p>
+      ${answersHTML}
+    `;
+
+    document.getElementById('drawer-overlay').classList.add('open');
+    document.getElementById('detail-drawer').classList.add('open');
+  }
+
+  function closeDrawer() {
+    document.getElementById('drawer-overlay').classList.remove('open');
+    document.getElementById('detail-drawer').classList.remove('open');
+  }
+
+  /* ================================================================
+     EXPORTAR PDF
+  ================================================================ */
+
+  function exportPDF() {
+    if (!allResults.length) {
+      showToast('No hay datos para exportar', 'error');
+      return;
+    }
+
+    showToast('Generando PDF...', 'success');
+
+    const now   = new Date();
+    const total = allResults.length;
+    const avg   = Math.round(allResults.reduce((s, r) => s + r.porcentaje, 0) / total);
+    const top   = Math.max(...allResults.map(r => r.porcentaje));
+    const pass  = allResults.filter(r => r.porcentaje >= 60).length;
+
+    const rowsHTML = allResults.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${r.nombre}</td>
+        <td>${r.email}</td>
+        <td><span class="pdf-badge ${getBadgeClass(r.porcentaje)}">${r.porcentaje}%</span></td>
+        <td>${r.score_correcto}/${r.score_total}</td>
+        <td>${formatDate(r.created_at)}</td>
+      </tr>
+    `).join('');
+
+    document.getElementById('pdf-content').innerHTML = `
+      <div class="pdf-header">
+        <h1>📊 Informe de Resultados — Quiz Tecnológico</h1>
+        <p>Generado: ${now.toLocaleDateString('es-CO')} ${now.toLocaleTimeString('es-CO')} · SENA</p>
+      </div>
+
+      <div class="pdf-kpi-row">
+        <div class="pdf-kpi">
+          <div class="num">${total}</div>
+          <div class="lbl">Total intentos</div>
+        </div>
+        <div class="pdf-kpi">
+          <div class="num">${avg}%</div>
+          <div class="lbl">Promedio</div>
+        </div>
+        <div class="pdf-kpi">
+          <div class="num">${top}%</div>
+          <div class="lbl">Puntaje más alto</div>
+        </div>
+        <div class="pdf-kpi">
+          <div class="num">${pass}</div>
+          <div class="lbl">Aprobados (≥60%)</div>
+        </div>
+      </div>
+
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Nombre</th><th>Email</th>
+            <th>Resultado</th><th>Correctas</th><th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHTML}</tbody>
+      </table>
+
+      <div class="pdf-footer">
+        Informe generado automáticamente · Quiz Tecnológico SENA · ${now.getFullYear()}
+      </div>
+    `;
+
+    const opt = {
+      margin:      [10, 10, 10, 10],
+      filename:    `quiz-resultados-${now.toISOString().slice(0,10)}.pdf`,
+      image:       { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+
+    html2pdf()
+      .set(opt)
+      .from(document.getElementById('pdf-content'))
+      .save()
+      .then(() => showToast('PDF descargado 🎉', 'success'))
+      .catch(() => showToast('Error al generar PDF', 'error'));
+  }
+
+  /* ================================================================
+     HELPERS
+  ================================================================ */
+
+  function getBadgeClass(pct) {
+    if (pct >= 80) return 'high';
+    if (pct >= 60) return 'mid';
+    return 'low';
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('es-CO', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  function getDuration(start, end) {
+    if (!start || !end) return '—';
+    const secs = Math.round((new Date(end) - new Date(start)) / 1000);
+    if (secs < 60) return secs + ' seg';
+    return Math.round(secs / 60) + ' min';
+  }
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className   = `toast ${type} show`;
+    setTimeout(() => { t.className = 'toast'; }, 3500);
+  }
+
+  // Enter en login
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
+      loginAdmin();
+    }
+  });
+</script>
+</body>
+</html>
